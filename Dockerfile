@@ -1,4 +1,5 @@
-FROM ubuntu:16.04
+FROM ubuntu:20.04
+ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update && apt-get -y dist-upgrade \
     && apt-get -y install python-pip uwsgi virtualenv sudo python-dev libyaml-dev \

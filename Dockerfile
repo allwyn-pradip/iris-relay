@@ -1,4 +1,5 @@
-FROM ubuntu:20.10
+FROM ubuntu:20.04
+ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update && apt-get -y dist-upgrade \
     && apt-get -y install python3-pip uwsgi python3-venv sudo python3-dev libyaml-dev \

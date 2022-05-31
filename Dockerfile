@@ -7,7 +7,7 @@ RUN apt-get update && apt-get -y dist-upgrade \
     && rm -rf /var/cache/apt/archives/*
 
 WORKDIR /home/iris-relay
-RUN useradd -m -s /bin/bash iris
+RUN useradd -m -s /bin/bash iris-relay
 
 COPY docker/daemons /home/iris-relay/daemons
 COPY src /home/iris-relay/src

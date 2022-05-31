@@ -45,9 +45,10 @@ setuptools.setup(
         'urllib3==1.25.11',
         'falcon==1.4.1',
         'ujson==1.35',
-        'plivo==4.8.1',
-        'irisclient==1.3.0',
-        'oncallclient==1.1.0',
+        'plivo',
+        'irisclient',
+        'oncallclient',
+        'decorator==4.4.2',
     ],
     entry_points={
         'console_scripts': [

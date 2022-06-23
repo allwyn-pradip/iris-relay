@@ -3,7 +3,7 @@ ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update && apt-get -y dist-upgrade \
     && apt-get -y install python3-pip uwsgi python3-venv sudo python3-dev libyaml-dev sudo \
-    libsasl2-dev libldap2-dev nginx uwsgi-plugin-python3 uwsgi-plugin-gevent-python3 libssl-dev libffi-dev  \
+    libsasl2-dev libldap2-dev nginx uwsgi-plugin-python3 uwsgi-plugin-gevent-python3 libssl-dev libffi-dev mysql-client  \
     && rm -rf /var/cache/apt/archives/*
 
 WORKDIR /home/iris-relay

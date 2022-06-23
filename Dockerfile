@@ -25,7 +25,7 @@ COPY ops/daemons /home/iris-relay/daemons
 COPY ops/daemons/uwsgi-docker.yaml /home/iris-relay/daemons/uwsgi.yaml
 COPY db /home/iris-relay/db
 COPY configs /home/iris-relay/config
-COPY healthcheck.py /tmp/status
+COPY healthcheck /tmp/status
 COPY ops/entrypoint.py /home/iris-relay/entrypoint.py
 
 EXPOSE 16648

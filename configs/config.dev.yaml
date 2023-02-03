@@ -2,9 +2,10 @@ server:
   host: 0.0.0.0
   port: 16648
   # debug: True
-  enable_basic_auth: False
+  enable_basic_auth: True
   basic_auth:
     iris_twilio_user: 'barbaz'
+    iris_plivo_user: 'barbaz'
   # lb_routing_path: '/iris-relay'
 allow_origins_list:
  - http://localhost:8080
@@ -17,6 +18,9 @@ special_auth_endpoint_list:
 twilio:
   remote_host: 'localhost:11648'
   auth_token: 'foobar'
+plivo:
+  remote_host: 'localhost:11648'
+  auth_token: 'foobar'  
 slack:
   verification_token: 'foo'
   response_text: 'Alert claimed.'
@@ -30,6 +34,8 @@ iris:
     twilio_calls: 'response/twilio/calls'
     twilio_messages: 'response/twilio/messages'
     twilio_status: 'twilio/deliveryupdate'
+    plivo_calls: 'response/plivo/calls'
+    plivo_status: 'plivo/deliveryupdate'    
     slack: 'response/slack'
 oncall:
   relay_app_name: 'iris-relay'
@@ -67,7 +73,7 @@ gmail:
   verification_code: googleabcdefg.html
   token: lbbc1797daaaaaaavaa6d3f0aad45e66
 gmail_one_click_url_key: 'foo'
-healthcheck_path: /tmp/relay_health
+healthcheck_path: /tmp/status
 db:
   conn:
     kwargs:

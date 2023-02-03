@@ -59,7 +59,7 @@ def wait_for_mysql(config):
 def initialize_mysql_schema(config):
     print('Initializing iris-relay database')
     # disable one_db to let schema_v0.sql create the database
-    re = load_sqldump(config, os.path.join(dbpath, 'schema_v0.sql'), one_db=False)
+    re = load_sqldump(config, os.path.join(dbpath, 'schema_v0.sql'), one_db=True)
     if not re:
         sys.exit('Failed to load schema into DB.')
 

@@ -32,4 +32,4 @@ gmail:
   creds: './configs/client_secret.apps.googleusercontent.com.json'
   verification_code: googleabcdefg.html
   token: lbbc1797daaaaaaavaa6d3f0aad45e66
-  var_dir: '/home/iris/var/relay'
+  var_dir: '/home/iris-relay/var/relay'

@@ -488,6 +488,100 @@ class TwilioCallsGather(object):
         resp.content_type = 'application/xml'
 
 
+class PlivoCallsGather(object):
+    def __init__(self, config):
+        self.config = config
+
+    def get_api_url(self, env, v, path):
+        name = ''.join([env['wsgi.url_scheme'], '://',
+                        env['HTTP_HOST'],
+                        self.config['server'].get('lb_routing_path', '')])
+        return '/'.join([name, 'api', v, path])
+
+    def on_post(self, req, resp):
+        content1 = req.get_param('content', required=False)
+        if content1 is None:
+            content1 = 'None'
+        instruction = req.get_param('instruction', required=True)
+        message_id = req.get_param('message_id', required=True)
+        source = req.get_param('source', required=True)
+        content = content1 + ' ' + source + ' ' + instruction
+        if not message_id.isdigit() and not uuid4hex.match(message_id):
+            raise falcon.HTTPBadRequest('Bad message id',
+                                        'message id must be int/hex')
+
+        action = self.get_api_url(req.env, 'v0', 'plivo/calls/relay?') + urlencode({
+            'message_id': message_id,
+        })
+
+        element = plivoxml.ResponseElement()
+        response = element.add(
+            plivoxml.GetInputElement().
+            set_action(action).
+            set_method('POST').
+            set_input_type('dtmf').
+            set_execution_timeout(5).
+            set_num_digits(1).
+            set_language('en-US').
+            set_speech_model('default').
+            add_speak(content=content, voice='Polly.Salli', language='en-US', loop=3).
+            add_wait(length=5, silence=0, min_silence=10, beep=1)
+
+        ).to_string(False)
+        resp.status = falcon.HTTP_200
+        resp.body = response
+        resp.content_type = 'application/xml'
+
+
+class PlivoCallsRelay(object):
+    def __init__(self, config, iclient):
+        self.config = config
+        self.iclient = iclient
+
+    @staticmethod
+    def return_plixml_call(reason, resp):
+        response = (plivoxml.ResponseElement()
+                    .add(plivoxml.SpeakElement(reason)))
+        resp.status = falcon.HTTP_200
+        resp.body = response.to_string()
+        resp.content_type = 'application/xml'
+
+    def on_post(self, req, resp):
+        """
+        Accept plivo gather callbacks and forward to iris API
+        """
+        message_id = req.get_param('message_id')
+
+        # If we weren't given a message_id, this is an OOB message and there isn't
+        # anything to say, so hang up.
+        if not message_id:
+            self.return_plixml_call('Thank you', resp)
+            return
+
+        if not message_id.isdigit() and not uuid4hex.match(message_id):
+            raise falcon.HTTPBadRequest('Bad message id', 'message id must be int/hex')
+
+        try:
+            path = self.config['iris']['hook']['plivo_calls']
+            re = self.iclient.post(path, req.context['body'].decode('utf-8'), raw=True, params={
+                'message_id': message_id
+            })
+        except MaxRetryError as e:
+            logger.error(e.reason)
+            self.return_plixml_call('Connection error to web hook.', resp)
+            return
+
+        if re.status != 200:
+            self.return_plixml_call(
+                'Got status code: %d, content: %s' % (re.status,
+                                                      re.data[0:100]), resp)
+            return
+        else:
+            body = process_api_response(re.data)
+            self.return_plixml_call(body, resp)
+            return
+
+
 class TwilioCallsRelay(object):
     def __init__(self, config, iclient):
         self.config = config
@@ -597,6 +691,30 @@ class TwilioDeliveryStatus(object):
 
         if re.status_code != 204:
             logger.error('Invalid response from API for delivery status update: %s', re.status_code)
+            raise falcon.HTTPBadRequest('Likely bad params passed', 'Invalid response from API')
+
+        resp.status = falcon.HTTP_204
+
+
+class PlivoDeliveryStatus(object):
+    def __init__(self, config, iclient):
+        self.iclient = iclient
+        self.endpoint = config['iris']['hook']['plivo_status']
+
+    def on_post(self, req, resp):
+        """
+        Accept plivo POST that has message delivery status, and pass it
+        to iris-api
+        """
+
+        try:
+            re = self.iclient.post(self.endpoint, req.context['body'].decode('utf-8'), raw=True)
+        except MaxRetryError:
+            logger.exception('Failed posting data to iris-api')
+            raise falcon.HTTPInternalServerError('Internal Server Error', 'API call failed')
+
+        if re.status != 204:
+            logger.error('Invalid response from API for delivery status update: %s', re.status)
             raise falcon.HTTPBadRequest('Likely bad params passed', 'Invalid response from API')
 
         resp.status = falcon.HTTP_204
@@ -1026,6 +1144,9 @@ def get_relay_app(config=None):
             vcode = config['gmail']['verification_code']
             app.add_route('/' + vcode, GmailVerification(vcode))
 
+    plivo_calls_say = PlivoCallsSay()
+    plivo_calls_gather = PlivoCallsGather(config)
+    plivo_calls_relay = PlivoCallsRelay(config, iclient)
     twilio_calls_say = TwilioCallsSay()
     twilio_calls_gather = TwilioCallsGather(config)
     twilio_calls_relay = TwilioCallsRelay(config, iclient)
@@ -1035,6 +1156,9 @@ def get_relay_app(config=None):
     twilio_delivery_status = TwilioDeliveryStatus(config, iclient)
     healthcheck = Healthcheck(config.get('healthcheck_path'))
 
+    app.add_route('/api/v0/plivo/calls/say', plivo_calls_say)
+    app.add_route('/api/v0/plivo/calls/gather', plivo_calls_gather)
+    app.add_route('/api/v0/plivo/calls/relay', plivo_calls_relay)
     app.add_route('/api/v0/twilio/calls/say', twilio_calls_say)
     app.add_route('/api/v0/twilio/calls/gather', twilio_calls_gather)
     app.add_route('/api/v0/twilio/calls/relay', twilio_calls_relay)
